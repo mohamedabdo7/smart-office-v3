@@ -15,8 +15,6 @@ function OfficeModel({
   curtainPosition,
   onLoaded,
 }: OfficeModelProps) {
-  // ✅ استخدم useGLTF من drei - بيتعامل مع DRACO تلقائياً
-  // const { scene } = useGLTF("/models/office.glb");
   const { scene } = useGLTF("/models/office.glb");
   const texture = useTexture("/models/office-texture.webp");
 
@@ -26,67 +24,34 @@ function OfficeModel({
   const curtainInitialY = useRef<number | null>(null);
   const isInitialized = useRef(false);
 
-  // ✅ INITIALIZATION
+  // INITIALIZATION
   useEffect(() => {
     if (isInitialized.current) return;
-
-    console.clear();
-    console.log("\n╔═══════════════════════════════════════════════════════╗");
-    console.log("║     ✅ SOLUTION: REALISTIC GLASS COLOR ✅           ║");
-    console.log("╚═══════════════════════════════════════════════════════╝\n");
 
     texture.flipY = false;
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.anisotropy = 16;
     texture.needsUpdate = true;
 
-    let meshCount = 0;
-    let lightMeshesFound = 0;
-
-    console.log("\n📋 MESHES LIST:");
-    console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-
     scene.traverse((child) => {
       if ((child as THREE.Mesh).isMesh) {
         const mesh = child as THREE.Mesh;
-        meshCount++;
         const meshName = mesh.name?.toLowerCase() || "";
-
-        console.log(`${meshCount}. Mesh Name: "${mesh.name}"`);
-        console.log(
-          `   - Position: [${mesh.position.x.toFixed(2)}, ${mesh.position.y.toFixed(2)}, ${mesh.position.z.toFixed(2)}]`,
-        );
-        console.log(
-          `   - Material Type: ${mesh.material ? (mesh.material as any).type : "None"}`,
-        );
-        console.log(`   - Visible: ${mesh.visible}`);
-        console.log(`   - Contains "glass": ${meshName.includes("glass")}`);
-        console.log(`   - Contains "door": ${meshName.includes("door")}`);
-        console.log(`   - Contains "curtain": ${meshName.includes("curtain")}`);
-        console.log(`   - Contains "screen": ${meshName.includes("screen")}`);
-        console.log(`   - Contains "light": ${meshName.includes("light")}`);
-        console.log("");
 
         // Find DOOR glass
         if (meshName.includes("door") && meshName.includes("glass")) {
           doorGlassMeshRef.current = mesh;
-          console.log(`   🔒 → DOOR GLASS DETECTED!`);
         }
 
         // Find screen meshes
         if (meshName.includes("screen") || meshName.includes("tv")) {
           screenMeshesRef.current.push(mesh);
-          console.log(`   📺 → SCREEN DETECTED!`);
         }
 
         // Find CURTAIN mesh
         if (meshName.includes("curtain") && curtainInitialY.current === null) {
           curtainMeshRef.current = mesh;
           curtainInitialY.current = mesh.position.y;
-          console.log(`   🪟 → CURTAIN DETECTED!`);
-          console.log(
-            `   📌 SAVED Initial Y: ${mesh.position.y.toFixed(2)} (THIS WILL NEVER CHANGE)`,
-          );
         }
 
         if (mesh.material) {
@@ -108,10 +73,6 @@ function OfficeModel({
             mesh.renderOrder = 1;
             mesh.castShadow = false;
             mesh.receiveShadow = false;
-
-            console.log(
-              `🪟 ${mesh.name}: Realistic glass color (NO texture) → #${glassColor.toString(16)}`,
-            );
           }
           // NON-GLASS
           else {
@@ -129,8 +90,6 @@ function OfficeModel({
               material.emissive = new THREE.Color(0xfff8e1);
               material.emissiveIntensity = 0.8;
               material.emissiveMap = texture;
-              lightMeshesFound++;
-              console.log(`   💡 → LIGHT MESH!`);
             }
 
             mesh.castShadow = true;
@@ -140,39 +99,14 @@ function OfficeModel({
       }
     });
 
-    console.log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    console.log("\n📊 SUMMARY:");
-    console.log(`✅ Total Meshes: ${meshCount}`);
-    console.log(`✨ Light Meshes: ${lightMeshesFound}`);
-    console.log(
-      `🔒 Door Glass: ${doorGlassMeshRef.current ? "Found ✓" : "Not Found ✗"}`,
-    );
-    console.log(`📺 Screen Meshes: ${screenMeshesRef.current.length}`);
-    console.log(
-      `🪟 Curtain: ${curtainMeshRef.current ? "Found ✓" : "Not Found ✗"}`,
-    );
-    console.log(
-      `📌 Curtain Initial Y (LOCKED): ${curtainInitialY.current?.toFixed(2)}`,
-    );
-    console.log(
-      `🪟 Glass Color: #c8dce8 (Light blue-gray - realistic tinted glass)`,
-    );
-    console.log(`\n📝 APPLIED:`);
-    console.log(`   ✅ Removed texture from all glass`);
-    console.log(`   ✅ Using realistic solid color instead`);
-    console.log(
-      "\n╚═══════════════════════════════════════════════════════╝\n",
-    );
-
     isInitialized.current = true;
 
     setTimeout(() => {
       onLoaded();
-      console.log("✅ Model fully loaded - hiding loading screen");
     }, 500);
   }, [scene, texture, onLoaded]);
 
-  // ✅ DOOR GLASS PRIVACY MODE
+  // DOOR GLASS PRIVACY MODE
   useEffect(() => {
     if (doorGlassMeshRef.current && doorGlassMeshRef.current.material) {
       const material = doorGlassMeshRef.current
@@ -187,13 +121,10 @@ function OfficeModel({
       }
 
       material.needsUpdate = true;
-      console.log(
-        `🔒 Door Privacy: ${privacyMode ? "ON (Black Frosted)" : "OFF (Transparent)"}`,
-      );
     }
   }, [privacyMode]);
 
-  // ✅ MEETING SCREEN
+  // MEETING SCREEN
   useEffect(() => {
     screenMeshesRef.current.forEach((mesh) => {
       if (mesh.material) {
@@ -223,26 +154,15 @@ function OfficeModel({
         }
       }
     });
-    console.log(`📺 Meeting: ${meetingOn ? "ON" : "OFF"}`);
   }, [meetingOn]);
 
-  // ✅ CURTAIN ANIMATIONn
+  // CURTAIN ANIMATION
   useEffect(() => {
     if (!curtainMeshRef.current || curtainInitialY.current === null) return;
 
     const maxRaiseDistance = 3.0;
     const targetY =
       curtainInitialY.current + (curtainPosition / 100) * maxRaiseDistance;
-
-    console.log("\n┌─────────────────────────────────────┐");
-    console.log("│  🪟 CURTAIN MOVEMENT                │");
-    console.log("└─────────────────────────────────────┘");
-    console.log(`📌 LOCKED Initial Y: ${curtainInitialY.current.toFixed(2)}`);
-    console.log(`📊 Position: ${Math.round(curtainPosition)}%`);
-    console.log(`🎯 Target Y: ${targetY.toFixed(2)}`);
-    console.log(
-      `📍 Current Y: ${curtainMeshRef.current.position.y.toFixed(2)}`,
-    );
 
     let animationFrameId: number;
 
@@ -254,7 +174,6 @@ function OfficeModel({
 
       if (Math.abs(diff) < 0.001) {
         curtainMeshRef.current.position.y = targetY;
-        console.log(`✅ Reached target Y: ${targetY.toFixed(2)}\n`);
         return;
       }
 
@@ -279,7 +198,6 @@ function OfficeModel({
   return <primitive object={scene} />;
 }
 
-// ✅ PRELOAD - مهم للـ performance
 useGLTF.preload("/models/office.glb");
 useTexture.preload("/models/office-texture.webp");
 
