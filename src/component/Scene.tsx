@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import FixedCameraEnhanced from "./FixedCamera";
 import EnvironmentLighting from "./EnvironmentLighting";
+import { Environment } from "@react-three/drei";
 
 const OfficeModel = lazy(() => import("./OfficeModel"));
 
@@ -23,6 +24,13 @@ function Scene({
 }: SceneProps) {
   return (
     <>
+      <Environment
+        // files="/models/cobblestone_street_night_2k.exr"
+        files="/models/img-bg.jpeg"
+        background={true} // Show as background
+        environmentIntensity={0} // Don't affect lighting (IBL off)
+        backgroundRotation={[0, Math.PI * 1.5, 0]}
+      />
       <Suspense fallback={null}>
         <EnvironmentLighting lightsBrightness={lightsBrightness} />
       </Suspense>
