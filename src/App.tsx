@@ -117,7 +117,7 @@ function App() {
       return;
     }
 
-    const speed = 0.076; // ⬅️ هنا التغيير!
+    const speed = 0.0833; // ⬅️ 20 ثانية
 
     const animate = () => {
       setCurtainPosition((prev) => {

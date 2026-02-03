@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import FixedCamera from "./FixedCamera";
-import { Environment, FirstPersonControls } from "@react-three/drei";
+import { Environment } from "@react-three/drei";
 
 const OfficeModel = lazy(() => import("./OfficeModel"));
 const EnvironmentLighting = lazy(() => import("./EnvironmentLighting"));
