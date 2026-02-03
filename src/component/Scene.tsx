@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import FixedCamera from "./FixedCamera";
+import { Environment, FirstPersonControls } from "@react-three/drei";
 
 const OfficeModel = lazy(() => import("./OfficeModel"));
 const EnvironmentLighting = lazy(() => import("./EnvironmentLighting"));
@@ -8,7 +9,7 @@ interface SceneProps {
   lightsBrightness: number;
   privacyMode: boolean;
   meetingOn: boolean;
-  curtainPosition: number; // NEW!
+  curtainPosition: number;
   onLoaded: () => void;
 }
 
@@ -21,6 +22,13 @@ function Scene({
 }: SceneProps) {
   return (
     <>
+      <Environment
+        // files="/models/cobblestone_street_night_2k.exr"
+        files="/models/img-bg.jpeg"
+        background={true} // Show as background
+        environmentIntensity={0} // Don't affect lighting (IBL off)
+        backgroundRotation={[0, Math.PI * 1.5, 0]}
+      />
       <Suspense fallback={null}>
         <EnvironmentLighting lightsBrightness={lightsBrightness} />
       </Suspense>
