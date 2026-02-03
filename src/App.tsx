@@ -9,6 +9,9 @@ const Scene = lazy(() => import("./component/Scene"));
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [minLoadTimePassed, setMinLoadTimePassed] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [isTimeout, setIsTimeout] = useState(false);
+
   const [lightsBrightness, setLightsBrightness] = useState(100);
   const [privacyMode, setPrivacyMode] = useState(false);
   const [meetingOn, setMeetingOn] = useState(false);
@@ -22,7 +25,9 @@ function App() {
 
   const animationFrameRef = useRef<number | null>(null);
   const lastPositionRef = useRef(0);
+  const loadingTimeoutRef = useRef<number | null>(null);
 
+  // Minimum loading time
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinLoadTimePassed(true);
@@ -30,17 +35,54 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Loading timeout (30 seconds)
+  useEffect(() => {
+    if (isLoading && !hasError) {
+      loadingTimeoutRef.current = window.setTimeout(() => {
+        setIsTimeout(true);
+      }, 30000); // 30 seconds
+    }
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
+    };
+  }, [isLoading, hasError]);
+
   const handleLoaded = () => {
     if (minLoadTimePassed) {
       setIsLoading(false);
+      setHasError(false);
+      setIsTimeout(false);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+      }
     } else {
       const checkInterval = setInterval(() => {
         if (minLoadTimePassed) {
           setIsLoading(false);
+          setHasError(false);
+          setIsTimeout(false);
           clearInterval(checkInterval);
+          if (loadingTimeoutRef.current) {
+            clearTimeout(loadingTimeoutRef.current);
+          }
         }
       }, 100);
     }
+  };
+
+  const handleError = () => {
+    setHasError(true);
+    setIsLoading(true);
+    if (loadingTimeoutRef.current) {
+      clearTimeout(loadingTimeoutRef.current);
+    }
+  };
+
+  const handleRetry = () => {
+    window.location.reload();
   };
 
   const handleLightsOn = () => {
@@ -64,50 +106,6 @@ function App() {
     }
   }, [lightsBrightness]);
 
-  // useEffect(() => {
-  //   if (curtainMoving === "stopped") {
-  //     if (animationFrameRef.current !== null) {
-  //       cancelAnimationFrame(animationFrameRef.current);
-  //       animationFrameRef.current = null;
-  //     }
-  //     return;
-  //   }
-
-  //   const speed = 0.5;
-
-  //   const animate = () => {
-  //     setCurtainPosition((prev) => {
-  //       if (curtainMoving === "up") {
-  //         const newPos = prev + speed;
-  //         if (newPos >= 100) {
-  //           setCurtainMoving("stopped");
-  //           return 100;
-  //         }
-  //         return newPos;
-  //       } else if (curtainMoving === "down") {
-  //         const newPos = prev - speed;
-  //         if (newPos <= 0) {
-  //           setCurtainMoving("stopped");
-  //           return 0;
-  //         }
-  //         return newPos;
-  //       }
-  //       return prev;
-  //     });
-
-  //     animationFrameRef.current = requestAnimationFrame(animate);
-  //   };
-
-  //   animationFrameRef.current = requestAnimationFrame(animate);
-
-  //   return () => {
-  //     if (animationFrameRef.current !== null) {
-  //       cancelAnimationFrame(animationFrameRef.current);
-  //       animationFrameRef.current = null;
-  //     }
-  //   };
-  // }, [curtainMoving]);
-
   useEffect(() => {
     if (curtainMoving === "stopped") {
       if (animationFrameRef.current !== null) {
@@ -117,7 +115,7 @@ function App() {
       return;
     }
 
-    const speed = 0.0833; // ⬅️ 20 ثانية
+    const speed = 0.0833;
 
     const animate = () => {
       setCurtainPosition((prev) => {
@@ -189,7 +187,13 @@ function App() {
         overflow: "hidden",
       }}
     >
-      {isLoading && <LoadingScreen />}
+      {isLoading && (
+        <LoadingScreen
+          hasError={hasError}
+          isTimeout={isTimeout}
+          onRetry={handleRetry}
+        />
+      )}
 
       <div
         style={{
@@ -199,6 +203,7 @@ function App() {
           transition: "opacity 0.5s",
         }}
       >
+        {/* Control Panel */}
         <div style={{ display: "none" }}>
           <ControlPanel
             lightsBrightness={lightsBrightness}
@@ -240,6 +245,7 @@ function App() {
               meetingOn={meetingOn}
               curtainPosition={curtainPosition}
               onLoaded={handleLoaded}
+              onError={handleError}
             />
           </Suspense>
         </Canvas>

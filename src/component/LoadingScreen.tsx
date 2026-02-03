@@ -1,4 +1,14 @@
-function LoadingScreen() {
+interface LoadingScreenProps {
+  hasError?: boolean;
+  isTimeout?: boolean;
+  onRetry?: () => void;
+}
+
+function LoadingScreen({
+  hasError = false,
+  isTimeout = false,
+  onRetry,
+}: LoadingScreenProps) {
   return (
     <div
       style={{
@@ -7,106 +17,118 @@ function LoadingScreen() {
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%)",
+        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
         zIndex: 9999,
+        fontFamily: "Arial, sans-serif",
       }}
     >
-      {/* Main loader */}
+      {/* Logo/Icon */}
       <div
         style={{
-          width: "120px",
-          height: "120px",
-          border: "8px solid rgba(0, 255, 136, 0.1)",
-          borderTop: "8px solid #00ff88",
-          borderRadius: "50%",
-          animation: "spin 1s linear infinite",
+          fontSize: "80px",
           marginBottom: "30px",
+          animation: hasError ? "none" : "pulse 2s ease-in-out infinite",
         }}
-      />
+      >
+        {hasError || isTimeout ? "⚠️" : "🏢"}
+      </div>
 
       {/* Title */}
       <h1
         style={{
-          color: "#00ff88",
+          color: hasError || isTimeout ? "#ff6b6b" : "#00ff88",
           fontSize: "32px",
-          fontFamily: "Arial, sans-serif",
           fontWeight: "bold",
-          margin: "0 0 15px 0",
-          textShadow: "0 0 20px rgba(0, 255, 136, 0.5)",
+          marginBottom: "15px",
+          textAlign: "center",
         }}
       >
-        🏢 Smart Office
+        {hasError
+          ? "Loading Failed"
+          : isTimeout
+            ? "Loading Timeout"
+            : "Loading Office..."}
       </h1>
 
-      {/* Loading text */}
+      {/* Message */}
       <p
         style={{
-          color: "#ffffff",
+          color: "#aaa",
           fontSize: "16px",
-          fontFamily: "Arial, sans-serif",
-          margin: "0 0 10px 0",
-          opacity: 0.8,
+          marginBottom: hasError || isTimeout ? "30px" : "40px",
+          textAlign: "center",
+          maxWidth: "400px",
+          padding: "0 20px",
         }}
       >
-        Loading 3D Environment...
+        {hasError
+          ? "Failed to load 3D models. Please check your internet connection."
+          : isTimeout
+            ? "Loading is taking longer than expected. Please try again."
+            : "Please wait while we prepare your virtual office"}
       </p>
 
-      {/* Progress dots */}
-      <div
-        style={{
-          display: "flex",
-          gap: "10px",
-          marginTop: "10px",
-        }}
-      >
+      {/* Retry Button */}
+      {(hasError || isTimeout) && onRetry ? (
+        <button
+          onClick={onRetry}
+          style={{
+            padding: "15px 40px",
+            fontSize: "18px",
+            fontWeight: "bold",
+            color: "#000",
+            background: "#00ff88",
+            border: "none",
+            borderRadius: "8px",
+            cursor: "pointer",
+            transition: "all 0.3s",
+            boxShadow: "0 4px 15px rgba(0, 255, 136, 0.3)",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = "scale(1.05)";
+            e.currentTarget.style.boxShadow =
+              "0 6px 20px rgba(0, 255, 136, 0.5)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.boxShadow =
+              "0 4px 15px rgba(0, 255, 136, 0.3)";
+          }}
+        >
+          🔄 Try Again
+        </button>
+      ) : (
+        /* Loading Spinner */
         <div
           style={{
-            width: "12px",
-            height: "12px",
-            background: "#00ff88",
+            width: "60px",
+            height: "60px",
+            border: "6px solid rgba(0, 255, 136, 0.1)",
+            borderTop: "6px solid #00ff88",
             borderRadius: "50%",
-            animation: "pulse 1.5s ease-in-out infinite",
-            animationDelay: "0s",
+            animation: "spin 1s linear infinite",
           }}
         />
-        <div
-          style={{
-            width: "12px",
-            height: "12px",
-            background: "#00ff88",
-            borderRadius: "50%",
-            animation: "pulse 1.5s ease-in-out infinite",
-            animationDelay: "0.3s",
-          }}
-        />
-        <div
-          style={{
-            width: "12px",
-            height: "12px",
-            background: "#00ff88",
-            borderRadius: "50%",
-            animation: "pulse 1.5s ease-in-out infinite",
-            animationDelay: "0.6s",
-          }}
-        />
-      </div>
+      )}
 
-      {/* CSS animations */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 0.3; transform: scale(0.8); }
-          50% { opacity: 1; transform: scale(1.2); }
-        }
-      `}</style>
+      {/* CSS Animations */}
+      <style>
+        {`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+          }
+        `}
+      </style>
     </div>
   );
 }

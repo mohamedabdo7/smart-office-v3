@@ -1,9 +1,8 @@
 import { lazy, Suspense } from "react";
-import FixedCamera from "./FixedCamera";
-import { Environment } from "@react-three/drei";
+import FixedCameraEnhanced from "./FixedCamera";
+import EnvironmentLighting from "./EnvironmentLighting";
 
 const OfficeModel = lazy(() => import("./OfficeModel"));
-const EnvironmentLighting = lazy(() => import("./EnvironmentLighting"));
 
 interface SceneProps {
   lightsBrightness: number;
@@ -11,6 +10,7 @@ interface SceneProps {
   meetingOn: boolean;
   curtainPosition: number;
   onLoaded: () => void;
+  onError?: () => void;
 }
 
 function Scene({
@@ -19,16 +19,10 @@ function Scene({
   meetingOn,
   curtainPosition,
   onLoaded,
+  onError,
 }: SceneProps) {
   return (
     <>
-      <Environment
-        // files="/models/cobblestone_street_night_2k.exr"
-        files="/models/img-bg.jpeg"
-        background={true} // Show as background
-        environmentIntensity={0} // Don't affect lighting (IBL off)
-        backgroundRotation={[0, Math.PI * 1.5, 0]}
-      />
       <Suspense fallback={null}>
         <EnvironmentLighting lightsBrightness={lightsBrightness} />
       </Suspense>
@@ -38,11 +32,11 @@ function Scene({
           meetingOn={meetingOn}
           curtainPosition={curtainPosition}
           onLoaded={onLoaded}
+          onError={onError}
         />
       </Suspense>
       <Suspense fallback={null}>
-        {/* <FirstPersonControls /> */}
-        <FixedCamera />
+        <FixedCameraEnhanced />
       </Suspense>
     </>
   );

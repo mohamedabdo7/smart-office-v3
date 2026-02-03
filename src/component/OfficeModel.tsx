@@ -7,6 +7,7 @@ interface OfficeModelProps {
   meetingOn: boolean;
   curtainPosition: number;
   onLoaded: () => void;
+  onError?: () => void;
 }
 
 function OfficeModel({
@@ -14,99 +15,107 @@ function OfficeModel({
   meetingOn,
   curtainPosition,
   onLoaded,
+  onError,
 }: OfficeModelProps) {
-  const { scene } = useGLTF("/models/office.glb");
-  const texture = useTexture("/models/office-texture.webp");
-
   const doorGlassMeshRef = useRef<THREE.Mesh | null>(null);
   const screenMeshesRef = useRef<THREE.Mesh[]>([]);
   const curtainMeshRef = useRef<THREE.Mesh | null>(null);
   const curtainInitialY = useRef<number | null>(null);
   const isInitialized = useRef(false);
 
-  // INITIALIZATION
+  // ✅ Hooks بره أي try-catch
+  const { scene } = useGLTF("/models/office.glb", true, true, (loader) => {
+    // Optional: handle loading errors
+    loader.manager.onError = (url) => {
+      console.error(`Failed to load: ${url}`);
+      if (onError) onError();
+    };
+  });
+
+  const texture = useTexture("/models/office-texture.webp");
+
   useEffect(() => {
     if (isInitialized.current) return;
 
-    texture.flipY = false;
-    texture.colorSpace = THREE.SRGBColorSpace;
-    texture.anisotropy = 16;
-    texture.needsUpdate = true;
+    try {
+      texture.flipY = false;
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 16;
+      texture.needsUpdate = true;
 
-    scene.traverse((child) => {
-      if ((child as THREE.Mesh).isMesh) {
-        const mesh = child as THREE.Mesh;
-        const meshName = mesh.name?.toLowerCase() || "";
-
-        // Find DOOR glass
-        if (meshName.includes("door") && meshName.includes("glass")) {
-          doorGlassMeshRef.current = mesh;
-        }
-
-        // Find screen meshes
-        if (meshName.includes("screen") || meshName.includes("tv")) {
-          screenMeshesRef.current.push(mesh);
-        }
-
-        // Find CURTAIN mesh
-        if (meshName.includes("curtain") && curtainInitialY.current === null) {
-          curtainMeshRef.current = mesh;
-          curtainInitialY.current = mesh.position.y;
-        }
-
-        if (mesh.material) {
+      scene.traverse((child) => {
+        if ((child as THREE.Mesh).isMesh) {
+          const mesh = child as THREE.Mesh;
           const meshName = mesh.name?.toLowerCase() || "";
 
-          // ALL GLASS - Realistic solid color (NO TEXTURE)
-          if (meshName.includes("glass")) {
-            const glassColor = 0xc8dce8;
-
-            const basicMaterial = new THREE.MeshBasicMaterial({
-              color: glassColor,
-              transparent: true,
-              opacity: 0.3,
-              side: THREE.DoubleSide,
-              depthWrite: false,
-            });
-
-            mesh.material = basicMaterial;
-            mesh.renderOrder = 1;
-            mesh.castShadow = false;
-            mesh.receiveShadow = false;
+          if (meshName.includes("door") && meshName.includes("glass")) {
+            doorGlassMeshRef.current = mesh;
           }
-          // NON-GLASS
-          else {
-            const material = mesh.material as THREE.MeshStandardMaterial;
 
-            material.map = texture;
-            material.needsUpdate = true;
-            material.transparent = false;
-            material.opacity = 1.0;
-            material.metalness = 1;
-            material.roughness = 1;
+          if (meshName.includes("screen") || meshName.includes("tv")) {
+            screenMeshesRef.current.push(mesh);
+          }
 
-            // Light meshes
-            if (meshName.includes("light")) {
-              material.emissive = new THREE.Color(0xfff8e1);
-              material.emissiveIntensity = 0.8;
-              material.emissiveMap = texture;
+          if (
+            meshName.includes("curtain") &&
+            curtainInitialY.current === null
+          ) {
+            curtainMeshRef.current = mesh;
+            curtainInitialY.current = mesh.position.y;
+          }
+
+          if (mesh.material) {
+            const meshName = mesh.name?.toLowerCase() || "";
+
+            if (meshName.includes("glass")) {
+              const glassColor = 0xc8dce8;
+
+              const basicMaterial = new THREE.MeshBasicMaterial({
+                color: glassColor,
+                transparent: true,
+                opacity: 0.3,
+                side: THREE.DoubleSide,
+                depthWrite: false,
+              });
+
+              mesh.material = basicMaterial;
+              mesh.renderOrder = 1;
+              mesh.castShadow = false;
+              mesh.receiveShadow = false;
+            } else {
+              const material = mesh.material as THREE.MeshStandardMaterial;
+
+              material.map = texture;
+              material.needsUpdate = true;
+              material.transparent = false;
+              material.opacity = 1.0;
+              material.metalness = 1;
+              material.roughness = 1;
+
+              if (meshName.includes("light")) {
+                material.emissive = new THREE.Color(0xfff8e1);
+                material.emissiveIntensity = 0.8;
+                material.emissiveMap = texture;
+              }
+
+              mesh.castShadow = true;
+              mesh.receiveShadow = true;
             }
-
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
           }
         }
-      }
-    });
+      });
 
-    isInitialized.current = true;
+      isInitialized.current = true;
 
-    setTimeout(() => {
-      onLoaded();
-    }, 500);
-  }, [scene, texture, onLoaded]);
+      setTimeout(() => {
+        onLoaded();
+      }, 500);
+    } catch (error) {
+      console.error("Error initializing model:", error);
+      if (onError) onError();
+    }
+  }, [scene, texture, onLoaded, onError]);
 
-  // DOOR GLASS PRIVACY MODE
   useEffect(() => {
     if (doorGlassMeshRef.current && doorGlassMeshRef.current.material) {
       const material = doorGlassMeshRef.current
@@ -124,7 +133,6 @@ function OfficeModel({
     }
   }, [privacyMode]);
 
-  // MEETING SCREEN
   useEffect(() => {
     screenMeshesRef.current.forEach((mesh) => {
       if (mesh.material) {
@@ -156,7 +164,6 @@ function OfficeModel({
     });
   }, [meetingOn]);
 
-  // CURTAIN ANIMATION
   useEffect(() => {
     if (!curtainMeshRef.current || curtainInitialY.current === null) return;
 
