@@ -215,21 +215,23 @@ function App() {
           transition: "opacity 0.5s",
         }}
       >
-        <ControlPanel
-          lightsBrightness={lightsBrightness}
-          setLightsBrightness={setLightsBrightness}
-          onLightsOn={handleLightsOn}
-          onLightsOff={handleLightsOff}
-          privacyMode={privacyMode}
-          setPrivacyMode={setPrivacyMode}
-          meetingOn={meetingOn}
-          setMeetingOn={setMeetingOn}
-          curtainPosition={curtainPosition}
-          onCurtainUp={handleCurtainUp}
-          onCurtainDown={handleCurtainDown}
-          onCurtainStop={handleCurtainStop}
-          curtainMoving={curtainMoving}
-        />
+        <div style={{ display: "none" }}>
+          <ControlPanel
+            lightsBrightness={lightsBrightness}
+            setLightsBrightness={setLightsBrightness}
+            onLightsOn={handleLightsOn}
+            onLightsOff={handleLightsOff}
+            privacyMode={privacyMode}
+            setPrivacyMode={setPrivacyMode}
+            meetingOn={meetingOn}
+            setMeetingOn={setMeetingOn}
+            curtainPosition={curtainPosition}
+            onCurtainUp={handleCurtainUp}
+            onCurtainDown={handleCurtainDown}
+            onCurtainStop={handleCurtainStop}
+            curtainMoving={curtainMoving}
+          />
+        </div>
 
         <Canvas
           shadows
