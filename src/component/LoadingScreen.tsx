@@ -1,14 +1,40 @@
+import { useEffect, useState } from "react";
+
 interface LoadingScreenProps {
   hasError?: boolean;
   isTimeout?: boolean;
   onRetry?: () => void;
+  autoRetrySeconds?: number;
 }
 
 function LoadingScreen({
   hasError = false,
   isTimeout = false,
   onRetry,
+  autoRetrySeconds = 5,
 }: LoadingScreenProps) {
+  const [countdown, setCountdown] = useState(autoRetrySeconds);
+
+  // Auto-reload countdown
+  useEffect(() => {
+    if ((hasError || isTimeout) && onRetry) {
+      setCountdown(autoRetrySeconds);
+
+      const interval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(interval);
+            onRetry(); // Auto reload
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [hasError, isTimeout, onRetry, autoRetrySeconds]);
+
   return (
     <div
       style={{
@@ -31,7 +57,8 @@ function LoadingScreen({
         style={{
           fontSize: "80px",
           marginBottom: "30px",
-          animation: hasError ? "none" : "pulse 2s ease-in-out infinite",
+          animation:
+            hasError || isTimeout ? "none" : "pulse 2s ease-in-out infinite",
         }}
       >
         {hasError || isTimeout ? "⚠️" : "🏢"}
@@ -59,7 +86,7 @@ function LoadingScreen({
         style={{
           color: "#aaa",
           fontSize: "16px",
-          marginBottom: hasError || isTimeout ? "30px" : "40px",
+          marginBottom: "20px",
           textAlign: "center",
           maxWidth: "400px",
           padding: "0 20px",
@@ -68,12 +95,27 @@ function LoadingScreen({
         {hasError
           ? "Failed to load 3D models. Please check your internet connection."
           : isTimeout
-            ? "Loading is taking longer than expected. Please try again."
+            ? "Loading is taking longer than expected."
             : "Please wait while we prepare your virtual office"}
       </p>
 
-      {/* Retry Button */}
-      {(hasError || isTimeout) && onRetry ? (
+      {/* Auto-reload countdown */}
+      {(hasError || isTimeout) && (
+        <div
+          style={{
+            color: "#00ff88",
+            fontSize: "18px",
+            fontWeight: "bold",
+            marginBottom: "20px",
+            textAlign: "center",
+          }}
+        >
+          Retrying in {countdown} second{countdown !== 1 ? "s" : ""}...
+        </div>
+      )}
+
+      {/* Retry Button or Loading Spinner */}
+      {hasError || isTimeout ? (
         <button
           onClick={onRetry}
           style={{
@@ -99,10 +141,9 @@ function LoadingScreen({
               "0 4px 15px rgba(0, 255, 136, 0.3)";
           }}
         >
-          🔄 Try Again
+          🔄 Retry Now
         </button>
       ) : (
-        /* Loading Spinner */
         <div
           style={{
             width: "60px",

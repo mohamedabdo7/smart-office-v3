@@ -6,11 +6,15 @@ import LoadingScreen from "./component/LoadingScreen";
 
 const Scene = lazy(() => import("./component/Scene"));
 
+const MAX_RETRY_ATTEMPTS = 3; // Maximum auto-retry attempts
+const AUTO_RETRY_DELAY = 5; // seconds
+
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [minLoadTimePassed, setMinLoadTimePassed] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [isTimeout, setIsTimeout] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [lightsBrightness, setLightsBrightness] = useState(100);
   const [privacyMode, setPrivacyMode] = useState(false);
@@ -27,7 +31,6 @@ function App() {
   const lastPositionRef = useRef(0);
   const loadingTimeoutRef = useRef<number | null>(null);
 
-  // Minimum loading time
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinLoadTimePassed(true);
@@ -35,12 +38,11 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Loading timeout (30 seconds)
   useEffect(() => {
     if (isLoading && !hasError) {
       loadingTimeoutRef.current = window.setTimeout(() => {
         setIsTimeout(true);
-      }, 30000); // 30 seconds
+      }, 30000);
     }
 
     return () => {
@@ -55,6 +57,7 @@ function App() {
       setIsLoading(false);
       setHasError(false);
       setIsTimeout(false);
+      setRetryCount(0); // Reset retry count on success
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
@@ -64,6 +67,7 @@ function App() {
           setIsLoading(false);
           setHasError(false);
           setIsTimeout(false);
+          setRetryCount(0);
           clearInterval(checkInterval);
           if (loadingTimeoutRef.current) {
             clearTimeout(loadingTimeoutRef.current);
@@ -82,7 +86,14 @@ function App() {
   };
 
   const handleRetry = () => {
-    window.location.reload();
+    if (retryCount < MAX_RETRY_ATTEMPTS) {
+      setRetryCount((prev) => prev + 1);
+      window.location.reload();
+    } else {
+      // After max attempts, show permanent error with manual retry only
+      setRetryCount(0);
+      window.location.reload();
+    }
   };
 
   const handleLightsOn = () => {
@@ -192,6 +203,7 @@ function App() {
           hasError={hasError}
           isTimeout={isTimeout}
           onRetry={handleRetry}
+          autoRetrySeconds={AUTO_RETRY_DELAY}
         />
       )}
 
@@ -203,24 +215,21 @@ function App() {
           transition: "opacity 0.5s",
         }}
       >
-        {/* Control Panel */}
-        <div style={{ display: "none" }}>
-          <ControlPanel
-            lightsBrightness={lightsBrightness}
-            setLightsBrightness={setLightsBrightness}
-            onLightsOn={handleLightsOn}
-            onLightsOff={handleLightsOff}
-            privacyMode={privacyMode}
-            setPrivacyMode={setPrivacyMode}
-            meetingOn={meetingOn}
-            setMeetingOn={setMeetingOn}
-            curtainPosition={curtainPosition}
-            onCurtainUp={handleCurtainUp}
-            onCurtainDown={handleCurtainDown}
-            onCurtainStop={handleCurtainStop}
-            curtainMoving={curtainMoving}
-          />
-        </div>
+        <ControlPanel
+          lightsBrightness={lightsBrightness}
+          setLightsBrightness={setLightsBrightness}
+          onLightsOn={handleLightsOn}
+          onLightsOff={handleLightsOff}
+          privacyMode={privacyMode}
+          setPrivacyMode={setPrivacyMode}
+          meetingOn={meetingOn}
+          setMeetingOn={setMeetingOn}
+          curtainPosition={curtainPosition}
+          onCurtainUp={handleCurtainUp}
+          onCurtainDown={handleCurtainDown}
+          onCurtainStop={handleCurtainStop}
+          curtainMoving={curtainMoving}
+        />
 
         <Canvas
           shadows
