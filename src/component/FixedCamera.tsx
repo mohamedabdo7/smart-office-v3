@@ -4,13 +4,13 @@ import { useThree, useFrame } from "@react-three/fiber";
 function FixedCameraEnhanced() {
   const { camera, gl } = useThree();
 
-  const mouseMovement = useRef({ x: 0, y: 0 });
   const rotation = useRef({ x: -0.1, y: -3.31 });
-  const isLocked = useRef(false);
+  const isDragging = useRef(false);
+  const previousMouse = useRef({ x: 0, y: 0 });
 
+  // Touch support
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const isTouchActive = useRef(false);
-  const velocity = useRef({ x: 0, y: 0 });
 
   const FIXED_POSITION = {
     x: 5.84,
@@ -19,31 +19,38 @@ function FixedCameraEnhanced() {
   };
 
   const SENSITIVITY = {
-    mouse: 0.002,
+    mouse: 0.003,
     touch: 0.005,
-    damping: 0.85,
   };
 
   useEffect(() => {
     camera.position.set(FIXED_POSITION.x, FIXED_POSITION.y, FIXED_POSITION.z);
 
+    // Mouse drag controls
+    const handleMouseDown = (e: MouseEvent) => {
+      isDragging.current = true;
+      previousMouse.current = { x: e.clientX, y: e.clientY };
+      gl.domElement.style.cursor = "grabbing";
+    };
+
     const handleMouseMove = (e: MouseEvent) => {
-      if (isLocked.current) {
-        mouseMovement.current.x = e.movementX;
-        mouseMovement.current.y = e.movementY;
+      if (isDragging.current) {
+        const deltaX = e.clientX - previousMouse.current.x;
+        const deltaY = e.clientY - previousMouse.current.y;
+
+        rotation.current.y -= deltaX * SENSITIVITY.mouse;
+        rotation.current.x -= deltaY * SENSITIVITY.mouse;
+
+        previousMouse.current = { x: e.clientX, y: e.clientY };
       }
     };
 
-    const handlePointerLockChange = () => {
-      isLocked.current = document.pointerLockElement === gl.domElement;
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      gl.domElement.style.cursor = "grab";
     };
 
-    const handleClick = () => {
-      if (!isLocked.current && !isTouchActive.current) {
-        gl.domElement.requestPointerLock();
-      }
-    };
-
+    // Touch controls
     const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 1) {
         const touch = e.touches[0];
@@ -52,7 +59,6 @@ function FixedCameraEnhanced() {
           y: touch.clientY,
         };
         isTouchActive.current = true;
-        velocity.current = { x: 0, y: 0 };
       }
     };
 
@@ -68,11 +74,8 @@ function FixedCameraEnhanced() {
         const deltaX = touch.clientX - touchStartRef.current.x;
         const deltaY = touch.clientY - touchStartRef.current.y;
 
-        velocity.current.x = deltaX;
-        velocity.current.y = deltaY;
-
-        mouseMovement.current.x = deltaX;
-        mouseMovement.current.y = deltaY;
+        rotation.current.y -= deltaX * SENSITIVITY.touch;
+        rotation.current.x -= deltaY * SENSITIVITY.touch;
 
         touchStartRef.current = {
           x: touch.clientX,
@@ -86,9 +89,13 @@ function FixedCameraEnhanced() {
       isTouchActive.current = false;
     };
 
-    document.addEventListener("pointerlockchange", handlePointerLockChange);
+    // Set initial cursor
+    gl.domElement.style.cursor = "grab";
+
+    // Add event listeners
+    gl.domElement.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mousemove", handleMouseMove);
-    gl.domElement.addEventListener("click", handleClick);
+    window.addEventListener("mouseup", handleMouseUp);
 
     gl.domElement.addEventListener("touchstart", handleTouchStart, {
       passive: false,
@@ -100,53 +107,30 @@ function FixedCameraEnhanced() {
     gl.domElement.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
-      document.removeEventListener(
-        "pointerlockchange",
-        handlePointerLockChange,
-      );
+      gl.domElement.removeEventListener("mousedown", handleMouseDown);
       window.removeEventListener("mousemove", handleMouseMove);
-      gl.domElement.removeEventListener("click", handleClick);
+      window.removeEventListener("mouseup", handleMouseUp);
       gl.domElement.removeEventListener("touchstart", handleTouchStart);
       gl.domElement.removeEventListener("touchmove", handleTouchMove);
       gl.domElement.removeEventListener("touchend", handleTouchEnd);
       gl.domElement.removeEventListener("touchcancel", handleTouchEnd);
+      gl.domElement.style.cursor = "default";
     };
   }, [camera, gl]);
 
   useFrame(() => {
-    if (isLocked.current || isTouchActive.current) {
-      const sensitivity = isTouchActive.current
-        ? SENSITIVITY.touch
-        : SENSITIVITY.mouse;
-
-      rotation.current.y -= mouseMovement.current.x * sensitivity;
-      rotation.current.x -= mouseMovement.current.y * sensitivity;
-
-      mouseMovement.current.x = 0;
-      mouseMovement.current.y = 0;
-    } else if (
-      !isTouchActive.current &&
-      (Math.abs(velocity.current.x) > 0.1 || Math.abs(velocity.current.y) > 0.1)
-    ) {
-      rotation.current.y -= velocity.current.x * SENSITIVITY.touch * 0.5;
-      rotation.current.x -= velocity.current.y * SENSITIVITY.touch * 0.5;
-
-      velocity.current.x *= SENSITIVITY.damping;
-      velocity.current.y *= SENSITIVITY.damping;
-
-      if (Math.abs(velocity.current.x) < 0.1) velocity.current.x = 0;
-      if (Math.abs(velocity.current.y) < 0.1) velocity.current.y = 0;
-    }
-
+    // Clamp pitch (up/down rotation)
     rotation.current.x = Math.max(
       -Math.PI / 2,
       Math.min(Math.PI / 2, rotation.current.x),
     );
 
+    // Apply rotation
     camera.rotation.order = "YXZ";
     camera.rotation.y = rotation.current.y;
     camera.rotation.x = rotation.current.x;
 
+    // Keep position fixed
     camera.position.set(FIXED_POSITION.x, FIXED_POSITION.y, FIXED_POSITION.z);
   });
 
