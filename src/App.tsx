@@ -215,7 +215,7 @@ function App() {
           transition: "opacity 0.5s",
         }}
       >
-        <div style={{ display: "" }}>
+        <div style={{ display: "none" }}>
           <ControlPanel
             lightsBrightness={lightsBrightness}
             setLightsBrightness={setLightsBrightness}
