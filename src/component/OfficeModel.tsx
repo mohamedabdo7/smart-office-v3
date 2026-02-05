@@ -22,20 +22,63 @@ function OfficeModel({
   const curtainMeshRef = useRef<THREE.Mesh | null>(null);
   const curtainInitialY = useRef<number | null>(null);
   const isInitialized = useRef(false);
+  const hasErrorOccurred = useRef(false);
+  const loadStartTime = useRef<number>(Date.now());
+  const loadTimeoutRef = useRef<number | null>(null);
 
-  // ✅ Hooks بره أي try-catch
+  // ✅ GLTF loading with error handling
   const { scene } = useGLTF("/models/office.glb", true, true, (loader) => {
-    // Optional: handle loading errors
     loader.manager.onError = (url) => {
-      console.error(`Failed to load: ${url}`);
-      if (onError) onError();
+      if (onError && !hasErrorOccurred.current) {
+        hasErrorOccurred.current = true;
+        onError();
+      }
     };
   });
 
+  // ✅ Texture loading
   const texture = useTexture("/models/office-texture.webp");
 
+  // 🔍 Safety timeout - if initialization takes too long, trigger error
   useEffect(() => {
-    if (isInitialized.current) return;
+    loadTimeoutRef.current = window.setTimeout(() => {
+      if (!isInitialized.current) {
+        if (onError && !hasErrorOccurred.current) {
+          hasErrorOccurred.current = true;
+          onError();
+        }
+      }
+    }, 10000); // 10 second timeout
+
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+    };
+  }, [onError]);
+
+  // ✅ Main initialization effect
+  useEffect(() => {
+    if (isInitialized.current) {
+      return;
+    }
+
+    // ✅ Check if resources loaded successfully
+    if (!scene) {
+      if (onError && !hasErrorOccurred.current) {
+        hasErrorOccurred.current = true;
+        onError();
+      }
+      return;
+    }
+
+    if (!texture) {
+      if (onError && !hasErrorOccurred.current) {
+        hasErrorOccurred.current = true;
+        onError();
+      }
+      return;
+    }
 
     try {
       texture.flipY = false;
@@ -43,10 +86,13 @@ function OfficeModel({
       texture.anisotropy = 16;
       texture.needsUpdate = true;
 
+      let meshCount = 0;
+
       scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
           const meshName = mesh.name?.toLowerCase() || "";
+          meshCount++;
 
           if (meshName.includes("door") && meshName.includes("glass")) {
             doorGlassMeshRef.current = mesh;
@@ -107,15 +153,24 @@ function OfficeModel({
 
       isInitialized.current = true;
 
+      // Clear the safety timeout since we succeeded
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+      }
+
+      // ✅ Call onLoaded after successful initialization
       setTimeout(() => {
         onLoaded();
       }, 500);
     } catch (error) {
-      console.error("Error initializing model:", error);
-      if (onError) onError();
+      if (onError && !hasErrorOccurred.current) {
+        hasErrorOccurred.current = true;
+        onError();
+      }
     }
   }, [scene, texture, onLoaded, onError]);
 
+  // Privacy mode effect
   useEffect(() => {
     if (doorGlassMeshRef.current && doorGlassMeshRef.current.material) {
       const material = doorGlassMeshRef.current
@@ -133,6 +188,7 @@ function OfficeModel({
     }
   }, [privacyMode]);
 
+  // Meeting screen effect
   useEffect(() => {
     screenMeshesRef.current.forEach((mesh) => {
       if (mesh.material) {
@@ -164,6 +220,7 @@ function OfficeModel({
     });
   }, [meetingOn]);
 
+  // Curtain animation effect
   useEffect(() => {
     if (!curtainMeshRef.current || curtainInitialY.current === null) return;
 
@@ -201,6 +258,11 @@ function OfficeModel({
       }
     };
   }, [curtainPosition]);
+
+  // ✅ Add safety check before rendering
+  if (!scene) {
+    return null;
+  }
 
   return <primitive object={scene} />;
 }

@@ -3,6 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
 import ControlPanel from "./component/ControlPanel";
 import LoadingScreen from "./component/LoadingScreen";
+import ErrorBoundary from "./component/ErrorBoundary";
 
 const Scene = lazy(() => import("./component/Scene"));
 
@@ -57,7 +58,7 @@ function App() {
       setIsLoading(false);
       setHasError(false);
       setIsTimeout(false);
-      setRetryCount(0); // Reset retry count on success
+      setRetryCount(0);
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
@@ -90,7 +91,6 @@ function App() {
       setRetryCount((prev) => prev + 1);
       window.location.reload();
     } else {
-      // After max attempts, show permanent error with manual retry only
       setRetryCount(0);
       window.location.reload();
     }
@@ -249,16 +249,18 @@ function App() {
           }}
         >
           <color attach="background" args={["#87ceeb"]} />
-          <Suspense fallback={null}>
-            <Scene
-              lightsBrightness={lightsBrightness}
-              privacyMode={privacyMode}
-              meetingOn={meetingOn}
-              curtainPosition={curtainPosition}
-              onLoaded={handleLoaded}
-              onError={handleError}
-            />
-          </Suspense>
+          <ErrorBoundary onError={handleError}>
+            <Suspense fallback={null}>
+              <Scene
+                lightsBrightness={lightsBrightness}
+                privacyMode={privacyMode}
+                meetingOn={meetingOn}
+                curtainPosition={curtainPosition}
+                onLoaded={handleLoaded}
+                onError={handleError}
+              />
+            </Suspense>
+          </ErrorBoundary>
         </Canvas>
       </div>
     </div>

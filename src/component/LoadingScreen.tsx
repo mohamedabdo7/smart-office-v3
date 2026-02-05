@@ -50,28 +50,37 @@ function LoadingScreen({
         alignItems: "center",
         zIndex: 9999,
         fontFamily: "Arial, sans-serif",
+        padding: "clamp(1rem, 5vw, 3rem)",
+        boxSizing: "border-box",
+        overflow: "hidden",
       }}
     >
-      {/* Logo/Icon */}
+      {/* Logo/Icon - Responsive size */}
       <div
         style={{
-          fontSize: "80px",
-          marginBottom: "30px",
+          fontSize: "clamp(3rem, 15vw, 5rem)", // 48px - 80px
+          marginBottom: "clamp(1rem, 3vw, 2rem)",
           animation:
             hasError || isTimeout ? "none" : "pulse 2s ease-in-out infinite",
+          lineHeight: 1,
         }}
       >
         {hasError || isTimeout ? "⚠️" : "🏢"}
       </div>
 
-      {/* Title */}
+      {/* Title - Responsive font size */}
       <h1
         style={{
           color: hasError || isTimeout ? "#ff6b6b" : "#00ff88",
-          fontSize: "32px",
+          fontSize: "clamp(1.5rem, 5vw, 2rem)", // 24px - 32px
           fontWeight: "bold",
-          marginBottom: "15px",
+          marginBottom: "clamp(0.75rem, 2vw, 1rem)",
           textAlign: "center",
+          lineHeight: 1.2,
+          padding: "0 1rem",
+          maxWidth: "100%",
+          wordBreak: "break-word",
+          margin: "0 0 clamp(0.75rem, 2vw, 1rem) 0",
         }}
       >
         {hasError
@@ -81,15 +90,17 @@ function LoadingScreen({
             : "Loading Office..."}
       </h1>
 
-      {/* Message */}
+      {/* Message - Responsive font and spacing */}
       <p
         style={{
           color: "#aaa",
-          fontSize: "16px",
-          marginBottom: "20px",
+          fontSize: "clamp(0.875rem, 3vw, 1rem)", // 14px - 16px
+          marginBottom: "clamp(1rem, 3vw, 1.5rem)",
           textAlign: "center",
-          maxWidth: "400px",
-          padding: "0 20px",
+          maxWidth: "min(90%, 400px)",
+          padding: "0 1rem",
+          lineHeight: 1.5,
+          margin: "0 0 clamp(1rem, 3vw, 1.5rem) 0",
         }}
       >
         {hasError
@@ -99,28 +110,29 @@ function LoadingScreen({
             : "Please wait while we prepare your virtual office"}
       </p>
 
-      {/* Auto-reload countdown */}
+      {/* Auto-reload countdown - Responsive */}
       {(hasError || isTimeout) && (
         <div
           style={{
             color: "#00ff88",
-            fontSize: "18px",
+            fontSize: "clamp(1rem, 3.5vw, 1.125rem)", // 16px - 18px
             fontWeight: "bold",
-            marginBottom: "20px",
+            marginBottom: "clamp(1rem, 3vw, 1.5rem)",
             textAlign: "center",
+            padding: "0 1rem",
           }}
         >
           Retrying in {countdown} second{countdown !== 1 ? "s" : ""}...
         </div>
       )}
 
-      {/* Retry Button or Loading Spinner */}
+      {/* Retry Button or Loading Spinner - Responsive */}
       {hasError || isTimeout ? (
         <button
           onClick={onRetry}
           style={{
-            padding: "15px 40px",
-            fontSize: "18px",
+            padding: "clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 5vw, 2.5rem)",
+            fontSize: "clamp(0.875rem, 3vw, 1.125rem)", // 14px - 18px
             fontWeight: "bold",
             color: "#000",
             background: "#00ff88",
@@ -129,6 +141,10 @@ function LoadingScreen({
             cursor: "pointer",
             transition: "all 0.3s",
             boxShadow: "0 4px 15px rgba(0, 255, 136, 0.3)",
+            minWidth: "min(200px, 80%)",
+            maxWidth: "300px",
+            touchAction: "manipulation",
+            WebkitTapHighlightColor: "transparent",
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = "scale(1.05)";
@@ -140,23 +156,29 @@ function LoadingScreen({
             e.currentTarget.style.boxShadow =
               "0 4px 15px rgba(0, 255, 136, 0.3)";
           }}
+          onTouchStart={(e) => {
+            e.currentTarget.style.transform = "scale(0.95)";
+          }}
+          onTouchEnd={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
+          }}
         >
           🔄 Retry Now
         </button>
       ) : (
         <div
           style={{
-            width: "60px",
-            height: "60px",
-            border: "6px solid rgba(0, 255, 136, 0.1)",
-            borderTop: "6px solid #00ff88",
+            width: "clamp(3rem, 10vw, 4rem)", // 48px - 64px
+            height: "clamp(3rem, 10vw, 4rem)", // 48px - 64px
+            border: "clamp(4px, 1vw, 6px) solid rgba(0, 255, 136, 0.1)",
+            borderTop: "clamp(4px, 1vw, 6px) solid #00ff88",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
           }}
         />
       )}
 
-      {/* CSS Animations */}
+      {/* CSS Animations - Enhanced for mobile */}
       <style>
         {`
           @keyframes spin {
@@ -167,6 +189,22 @@ function LoadingScreen({
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.8; }
+          }
+
+          /* Ensure smooth scrolling if content overflows on very small screens */
+          @media (max-height: 500px) {
+            body {
+              overflow: auto;
+            }
+          }
+
+          /* Reduce animation on devices that prefer reduced motion */
+          @media (prefers-reduced-motion: reduce) {
+            * {
+              animation-duration: 0.01ms !important;
+              animation-iteration-count: 1 !important;
+              transition-duration: 0.01ms !important;
+            }
           }
         `}
       </style>
