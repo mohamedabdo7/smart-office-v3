@@ -10,8 +10,20 @@ const Scene = lazy(() => import("./component/Scene"));
 const MAX_RETRY_ATTEMPTS = 3;
 const AUTO_RETRY_DELAY = 5;
 
-// 🍎 Detect iOS/iPad
+// 📱 Detect WebView environment
+const isWebView = (() => {
+  const ua = navigator.userAgent;
+  return (
+    ua.includes("Flutter") ||
+    /(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(ua) ||
+    ua.includes("wv")
+  );
+})();
+
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isIOSWebView = isIOS && isWebView;
+
+console.log("🌐 App Environment:", { isIOS, isWebView, isIOSWebView });
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -35,19 +47,26 @@ function App() {
   const lastPositionRef = useRef(0);
   const loadingTimeoutRef = useRef<number | null>(null);
 
-  // 🍎 iOS-specific: Minimum load time
+  // 📱 WebView-specific: Extended minimum load time
   useEffect(() => {
-    const minLoadTime = isIOS ? 1500 : 1000; // Longer for iOS
+    const minLoadTime = isIOSWebView ? 2000 : isIOS ? 1500 : 1000;
+    console.log(`⏳ Setting min load time: ${minLoadTime}ms`);
+
     const timer = setTimeout(() => {
+      console.log("✅ Min load time passed");
       setMinLoadTimePassed(true);
     }, minLoadTime);
+
     return () => clearTimeout(timer);
   }, []);
 
-  // 🍎 iOS-specific: Loading timeout
+  // 📱 WebView-specific: Much longer loading timeout
   useEffect(() => {
     if (isLoading && !hasError) {
-      const timeout = isIOS ? 45000 : 30000; // 45s for iOS, 30s for others
+      // WebView needs MUCH more time
+      const timeout = isIOSWebView ? 90000 : isIOS ? 45000 : 30000;
+      console.log(`⏱️ Setting loading timeout: ${timeout / 1000}s`);
+
       loadingTimeoutRef.current = window.setTimeout(() => {
         console.warn("⏱️ Loading timeout reached");
         setIsTimeout(true);
@@ -176,23 +195,17 @@ function App() {
   }, [curtainMoving]);
 
   const handleCurtainUp = () => {
-    if (curtainPosition >= 100) {
-      return;
-    }
+    if (curtainPosition >= 100) return;
     setCurtainMoving("up");
   };
 
   const handleCurtainDown = () => {
-    if (curtainPosition <= 0) {
-      return;
-    }
+    if (curtainPosition <= 0) return;
     setCurtainMoving("down");
   };
 
   const handleCurtainStop = () => {
-    if (curtainMoving === "stopped") {
-      return;
-    }
+    if (curtainMoving === "stopped") return;
     setCurtainMoving("stopped");
   };
 
@@ -202,12 +215,18 @@ function App() {
     }
   }, [curtainPosition]);
 
-  // 🍎 iOS-specific: Log device info
+  // 📱 Log environment info
   useEffect(() => {
-    if (isIOS) {
-      console.log("🍎 Running on iOS device");
-      console.log("Memory:", (performance as any).memory);
-    }
+    console.log("📱 Device Info:", {
+      isIOSWebView,
+      isIOS,
+      isWebView,
+      userAgent: navigator.userAgent,
+      memory: (performance as any).memory,
+      devicePixelRatio: window.devicePixelRatio,
+      screenSize: `${window.screen.width}x${window.screen.height}`,
+      viewportSize: `${window.innerWidth}x${window.innerHeight}`,
+    });
   }, []);
 
   return (
@@ -218,6 +237,9 @@ function App() {
         margin: 0,
         padding: 0,
         overflow: "hidden",
+        // 📱 Prevent WebView scroll/zoom
+        touchAction: "none",
+        userSelect: "none",
       }}
     >
       {isLoading && (
@@ -256,36 +278,61 @@ function App() {
         </div>
 
         <Canvas
-          shadows={!isIOS} // 🍎 Disable shadows on iOS for performance
+          shadows={false} // 📱 ALWAYS disable shadows in WebView
           camera={{ position: [0, 1.6, 5], fov: 75, near: 0.1, far: 1000 }}
-          style={{ width: "100%", height: "100%", display: "block" }}
+          style={{
+            width: "100%",
+            height: "100%",
+            display: "block",
+            // 📱 Allow camera rotation
+            touchAction: "none",
+          }}
           gl={{
-            antialias: !isIOS, // 🍎 Disable antialiasing on iOS
+            // 📱 WebView-specific settings
+            antialias: false, // Always off in WebView
+            alpha: false,
+            stencil: false,
+            depth: true,
+            powerPreference: isIOSWebView ? "low-power" : "default",
+            precision: isIOSWebView ? "lowp" : "mediump", // Even lower for WebView
+            preserveDrawingBuffer: false,
+            // Tone mapping
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.2,
             outputColorSpace: THREE.SRGBColorSpace,
-            // 🍎 iOS-specific optimizations
-            powerPreference: isIOS ? "low-power" : "high-performance",
-            precision: isIOS ? "mediump" : "highp", // Lower precision on iOS
           }}
-          onCreated={({ gl }) => {
-            // 🍎 iOS-specific shadow settings
-            if (!isIOS) {
-              gl.shadowMap.enabled = true;
-              gl.shadowMap.type = THREE.PCFSoftShadowMap;
-            }
+          onCreated={({ gl, camera }) => {
+            console.log("🎨 Canvas created");
 
-            // 🍎 Set pixel ratio (important for iPad retina displays)
-            const pixelRatio = isIOS
-              ? Math.min(window.devicePixelRatio, 2)
-              : window.devicePixelRatio;
+            // 📱 WebView: Limit pixel ratio aggressively
+            const pixelRatio = isIOSWebView
+              ? Math.min(window.devicePixelRatio, 1.5) // Max 1.5x for WebView
+              : isIOS
+                ? Math.min(window.devicePixelRatio, 2)
+                : window.devicePixelRatio;
+
             gl.setPixelRatio(pixelRatio);
+            console.log(
+              `📐 Pixel ratio set to: ${pixelRatio} (device: ${window.devicePixelRatio})`,
+            );
 
-            console.log("🎨 Canvas created with pixel ratio:", pixelRatio);
+            // Disable shadows completely
+            gl.shadowMap.enabled = false;
+
+            // 📱 WebView: More aggressive culling
+            camera.far = 100; // Reduce far plane
+            camera.updateProjectionMatrix();
+
+            console.log("📊 Canvas setup complete");
           }}
-          // 🍎 Performance mode for iOS
-          performance={{ min: isIOS ? 0.5 : 0.75 }}
-          dpr={isIOS ? [1, 2] : undefined} // Limit pixel ratio on iOS
+          // 📱 WebView: Performance settings
+          performance={{
+            min: isIOSWebView ? 0.3 : 0.5, // Lower quality threshold
+            max: isIOSWebView ? 0.7 : 1.0,
+            debounce: 200,
+          }}
+          dpr={isIOSWebView ? [1, 1.5] : isIOS ? [1, 2] : undefined}
+          // 📱 Always render for camera movement (frameloop="always" is default)
         >
           <color attach="background" args={["#87ceeb"]} />
           <ErrorBoundary onError={handleError}>
