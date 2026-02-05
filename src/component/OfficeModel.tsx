@@ -23,8 +23,10 @@ function OfficeModel({
   const curtainInitialY = useRef<number | null>(null);
   const isInitialized = useRef(false);
   const hasErrorOccurred = useRef(false);
-  const loadStartTime = useRef<number>(Date.now());
   const loadTimeoutRef = useRef<number | null>(null);
+
+  // 🍎 Detect iOS/iPad
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
   // ✅ GLTF loading with combined model + texture (OFFICEMaterial-v2)
   const { scene } = useGLTF(
@@ -33,6 +35,7 @@ function OfficeModel({
     true,
     (loader) => {
       loader.manager.onError = (url) => {
+        console.error("❌ Model loading error:", url);
         if (onError && !hasErrorOccurred.current) {
           hasErrorOccurred.current = true;
           onError();
@@ -41,23 +44,26 @@ function OfficeModel({
     },
   );
 
-  // 🔍 Safety timeout - if initialization takes too long, trigger error
+  // 🔍 Safety timeout - longer for iOS devices
   useEffect(() => {
+    const timeout = isIOS ? 15000 : 10000; // 15s for iOS, 10s for others
+
     loadTimeoutRef.current = window.setTimeout(() => {
       if (!isInitialized.current) {
+        console.error("⏱️ Loading timeout reached");
         if (onError && !hasErrorOccurred.current) {
           hasErrorOccurred.current = true;
           onError();
         }
       }
-    }, 10000); // 10 second timeout
+    }, timeout);
 
     return () => {
       if (loadTimeoutRef.current) {
         clearTimeout(loadTimeoutRef.current);
       }
     };
-  }, [onError]);
+  }, [onError, isIOS]);
 
   // ✅ Main initialization effect
   useEffect(() => {
@@ -67,14 +73,12 @@ function OfficeModel({
 
     // ✅ Check if resources loaded successfully
     if (!scene) {
-      if (onError && !hasErrorOccurred.current) {
-        hasErrorOccurred.current = true;
-        onError();
-      }
-      return;
+      console.warn("⚠️ Scene not loaded yet");
+      return; // Don't trigger error immediately, wait for timeout
     }
 
     try {
+      console.log("🔧 Initializing scene...");
       let meshCount = 0;
 
       scene.traverse((child) => {
@@ -105,6 +109,7 @@ function OfficeModel({
             if (meshName.includes("glass")) {
               const glassColor = 0xc8dce8;
 
+              // 🍎 iOS-optimized glass material
               const basicMaterial = new THREE.MeshBasicMaterial({
                 color: glassColor,
                 transparent: true,
@@ -118,16 +123,18 @@ function OfficeModel({
               mesh.castShadow = false;
               mesh.receiveShadow = false;
             } else {
-              // For non-glass materials, keep existing material but enhance it
               const material = mesh.material as THREE.MeshStandardMaterial;
 
-              // The texture is already embedded in OFFICEMaterial-v2.glb
-              // So we just need to configure material properties
+              // 🍎 iOS Optimization: Dispose old material first
+              if (mesh.material && mesh.material !== material) {
+                (mesh.material as THREE.Material).dispose();
+              }
+
               material.needsUpdate = true;
               material.transparent = false;
               material.opacity = 1.0;
 
-              // Keep default metalness/roughness if they exist, otherwise set defaults
+              // Keep default metalness/roughness if they exist
               if (material.metalness === undefined) {
                 material.metalness = 0.1;
               }
@@ -141,13 +148,18 @@ function OfficeModel({
                 material.emissiveIntensity = 0.8;
               }
 
-              mesh.castShadow = true;
-              mesh.receiveShadow = true;
+              // 🍎 iOS: Reduce shadow quality for performance
+              mesh.castShadow = !isIOS; // Disable shadows on iOS
+              mesh.receiveShadow = !isIOS;
             }
           }
+
+          // 🍎 iOS: Set frustum culling
+          mesh.frustumCulled = true;
         }
       });
 
+      console.log(`✅ Initialized ${meshCount} meshes`);
       isInitialized.current = true;
 
       // Clear the safety timeout since we succeeded
@@ -156,16 +168,20 @@ function OfficeModel({
       }
 
       // ✅ Call onLoaded after successful initialization
+      // 🍎 Longer delay for iOS to ensure everything is ready
+      const loadDelay = isIOS ? 800 : 500;
       setTimeout(() => {
+        console.log("🎉 Calling onLoaded");
         onLoaded();
-      }, 500);
+      }, loadDelay);
     } catch (error) {
+      console.error("❌ Initialization error:", error);
       if (onError && !hasErrorOccurred.current) {
         hasErrorOccurred.current = true;
         onError();
       }
     }
-  }, [scene, onLoaded, onError]);
+  }, [scene, onLoaded, onError, isIOS]);
 
   // Privacy mode effect
   useEffect(() => {
@@ -255,6 +271,29 @@ function OfficeModel({
       }
     };
   }, [curtainPosition]);
+
+  // 🍎 Cleanup on unmount (important for iOS)
+  useEffect(() => {
+    return () => {
+      if (scene) {
+        scene.traverse((child) => {
+          if ((child as THREE.Mesh).isMesh) {
+            const mesh = child as THREE.Mesh;
+            if (mesh.geometry) {
+              mesh.geometry.dispose();
+            }
+            if (mesh.material) {
+              if (Array.isArray(mesh.material)) {
+                mesh.material.forEach((material) => material.dispose());
+              } else {
+                mesh.material.dispose();
+              }
+            }
+          }
+        });
+      }
+    };
+  }, [scene]);
 
   // ✅ Add safety check before rendering
   if (!scene) {
