@@ -8,7 +8,7 @@ function EnvironmentLighting({ lightsBrightness }: EnvironmentLightingProps) {
 
   // Adjust intensities based on brightness
   const ambientIntensity = 1.5 * brightness;
-  const pointIntensity = 18 * brightness;
+  const pointIntensity = 2 * brightness;
   const hemisphereIntensity = 0.7 * brightness;
 
   return (
