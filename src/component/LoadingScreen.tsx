@@ -16,24 +16,24 @@ function LoadingScreen({
   const [countdown, setCountdown] = useState(autoRetrySeconds);
 
   // Auto-reload countdown
-  useEffect(() => {
-    if ((hasError || isTimeout) && onRetry) {
-      setCountdown(autoRetrySeconds);
+  // useEffect(() => {
+  //   if ((hasError || isTimeout) && onRetry) {
+  //     setCountdown(autoRetrySeconds);
 
-      const interval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            onRetry(); // Auto reload
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+  //     const interval = setInterval(() => {
+  //       setCountdown((prev) => {
+  //         if (prev <= 1) {
+  //           clearInterval(interval);
+  //           onRetry(); // Auto reload
+  //           return 0;
+  //         }
+  //         return prev - 1;
+  //       });
+  //     }, 1000);
 
-      return () => clearInterval(interval);
-    }
-  }, [hasError, isTimeout, onRetry, autoRetrySeconds]);
+  //     return () => clearInterval(interval);
+  //   }
+  // }, [hasError, isTimeout, onRetry, autoRetrySeconds]);
 
   return (
     <div

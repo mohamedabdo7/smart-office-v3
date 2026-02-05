@@ -37,7 +37,7 @@ function OfficeModel({
   });
 
   // ✅ Texture loading
-  const texture = useTexture("/models/office-texture.webp");
+  const texture = useTexture("/models/office-texture.jpeg");
 
   // 🔍 Safety timeout - if initialization takes too long, trigger error
   useEffect(() => {
@@ -268,6 +268,6 @@ function OfficeModel({
 }
 
 useGLTF.preload("/models/office.glb");
-useTexture.preload("/models/office-texture.webp");
+useTexture.preload("/models/office-texture.jpeg");
 
 export default OfficeModel;
