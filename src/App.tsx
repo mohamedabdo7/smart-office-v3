@@ -7,8 +7,20 @@ import ErrorBoundary from "./component/ErrorBoundary";
 
 const Scene = lazy(() => import("./component/Scene"));
 
-const MAX_RETRY_ATTEMPTS = 3; // Maximum auto-retry attempts
-const AUTO_RETRY_DELAY = 5; // seconds
+const MAX_RETRY_ATTEMPTS = 3;
+const AUTO_RETRY_DELAY = 5;
+
+// 🔍 Helper functions for device detection
+const isIOS = () => {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+};
+
+const isSafari = () => {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+};
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -32,6 +44,16 @@ function App() {
   const lastPositionRef = useRef(0);
   const loadingTimeoutRef = useRef<number | null>(null);
 
+  // 🔍 Log device info once
+  useEffect(() => {
+    console.log("🚀 App starting...");
+    console.log("🔍 Device:", {
+      isIOS: isIOS(),
+      isSafari: isSafari(),
+      userAgent: navigator.userAgent,
+    });
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setMinLoadTimePassed(true);
@@ -42,6 +64,7 @@ function App() {
   useEffect(() => {
     if (isLoading && !hasError) {
       loadingTimeoutRef.current = window.setTimeout(() => {
+        console.error("❌ Loading timeout (30s)");
         setIsTimeout(true);
       }, 30000);
     }
@@ -54,6 +77,8 @@ function App() {
   }, [isLoading, hasError]);
 
   const handleLoaded = () => {
+    console.log("✅ handleLoaded called");
+
     if (minLoadTimePassed) {
       setIsLoading(false);
       setHasError(false);
@@ -79,6 +104,7 @@ function App() {
   };
 
   const handleError = () => {
+    console.error("❌ handleError called");
     setHasError(true);
     setIsLoading(true);
     if (loadingTimeoutRef.current) {
@@ -87,6 +113,7 @@ function App() {
   };
 
   const handleRetry = () => {
+    console.log("🔄 Retrying...");
     if (retryCount < MAX_RETRY_ATTEMPTS) {
       setRetryCount((prev) => prev + 1);
       window.location.reload();
@@ -244,6 +271,7 @@ function App() {
             outputColorSpace: THREE.SRGBColorSpace,
           }}
           onCreated={({ gl }) => {
+            console.log("🎨 Canvas created successfully");
             gl.shadowMap.enabled = true;
             gl.shadowMap.type = THREE.PCFSoftShadowMap;
           }}
