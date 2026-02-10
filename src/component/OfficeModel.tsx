@@ -10,6 +10,19 @@ interface OfficeModelProps {
   onError?: () => void;
 }
 
+// 🔍 Helper function to detect iOS
+const isIOS = () => {
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+};
+
+// 🔍 Helper function to detect Safari
+const isSafari = () => {
+  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+};
+
 function OfficeModel({
   privacyMode,
   meetingOn,
@@ -26,9 +39,21 @@ function OfficeModel({
   const loadStartTime = useRef<number>(Date.now());
   const loadTimeoutRef = useRef<number | null>(null);
 
-  // ✅ GLTF loading with error handling
+  // 🔍 Log device/browser info once
+  useEffect(() => {
+    console.log("🔍 Device Info:", {
+      isIOS: isIOS(),
+      isSafari: isSafari(),
+      userAgent: navigator.userAgent,
+    });
+  }, []);
+
+  // ✅ GLTF loading - MUST be at top level, no try-catch around hooks!
+  console.log("📦 Loading GLTF model...");
   const { scene } = useGLTF("/models/office.glb", true, true, (loader) => {
+    console.log("📦 GLTF loader initialized");
     loader.manager.onError = (url) => {
+      console.error("❌ GLTF Manager Error loading:", url);
       if (onError && !hasErrorOccurred.current) {
         hasErrorOccurred.current = true;
         onError();
@@ -36,13 +61,24 @@ function OfficeModel({
     };
   });
 
-  // ✅ Texture loading
+  if (scene) {
+    console.log("✅ GLTF scene loaded");
+  }
+
+  // ✅ Texture loading - MUST be at top level, no try-catch around hooks!
+  console.log("🖼️ Loading texture...");
   const texture = useTexture("/models/office-texture.jpeg");
+
+  if (texture) {
+    console.log("✅ Texture loaded");
+  }
 
   // 🔍 Safety timeout - if initialization takes too long, trigger error
   useEffect(() => {
+    console.log("⏰ Setting up safety timeout (10s)...");
     loadTimeoutRef.current = window.setTimeout(() => {
       if (!isInitialized.current) {
+        console.error("❌ TIMEOUT: Initialization took too long (10s)");
         if (onError && !hasErrorOccurred.current) {
           hasErrorOccurred.current = true;
           onError();
@@ -52,6 +88,7 @@ function OfficeModel({
 
     return () => {
       if (loadTimeoutRef.current) {
+        console.log("⏰ Clearing safety timeout");
         clearTimeout(loadTimeoutRef.current);
       }
     };
@@ -59,35 +96,44 @@ function OfficeModel({
 
   // ✅ Main initialization effect
   useEffect(() => {
+    console.log("🚀 Main initialization effect running...", {
+      isInitialized: isInitialized.current,
+      hasScene: !!scene,
+      hasTexture: !!texture,
+    });
+
     if (isInitialized.current) {
+      console.log("⏭️ Already initialized, skipping...");
       return;
     }
 
     // ✅ Check if resources loaded successfully
     if (!scene) {
-      if (onError && !hasErrorOccurred.current) {
-        hasErrorOccurred.current = true;
-        onError();
-      }
+      console.warn("⚠️ Scene not ready yet...");
       return;
     }
 
     if (!texture) {
-      if (onError && !hasErrorOccurred.current) {
-        hasErrorOccurred.current = true;
-        onError();
-      }
+      console.warn("⚠️ Texture not ready yet...");
       return;
     }
 
     try {
+      console.log("⚙️ Configuring texture...");
       texture.flipY = false;
       texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = 16;
+
+      // 🔍 iOS/Safari specific: Use lower anisotropy
+      const maxAnisotropy = isIOS() || isSafari() ? 4 : 16;
+      texture.anisotropy = maxAnisotropy;
+      console.log(`⚙️ Set anisotropy to ${maxAnisotropy}`);
+
       texture.needsUpdate = true;
+      console.log("✅ Texture configured");
 
       let meshCount = 0;
 
+      console.log("🔍 Traversing scene for meshes...");
       scene.traverse((child) => {
         if ((child as THREE.Mesh).isMesh) {
           const mesh = child as THREE.Mesh;
@@ -96,10 +142,12 @@ function OfficeModel({
 
           if (meshName.includes("door") && meshName.includes("glass")) {
             doorGlassMeshRef.current = mesh;
+            console.log("✅ Door glass mesh found");
           }
 
           if (meshName.includes("screen") || meshName.includes("tv")) {
             screenMeshesRef.current.push(mesh);
+            console.log("✅ Screen mesh found");
           }
 
           if (
@@ -108,6 +156,7 @@ function OfficeModel({
           ) {
             curtainMeshRef.current = mesh;
             curtainInitialY.current = mesh.position.y;
+            console.log("✅ Curtain mesh found");
           }
 
           if (mesh.material) {
@@ -151,7 +200,10 @@ function OfficeModel({
         }
       });
 
+      console.log(`📊 Scene traversal complete: ${meshCount} meshes found`);
+
       isInitialized.current = true;
+      console.log("✅ Initialization successful!");
 
       // Clear the safety timeout since we succeeded
       if (loadTimeoutRef.current) {
@@ -159,10 +211,15 @@ function OfficeModel({
       }
 
       // ✅ Call onLoaded after successful initialization
+      const loadTime = Date.now() - loadStartTime.current;
+      console.log(`✅ Total load time: ${loadTime}ms`);
+
       setTimeout(() => {
+        console.log("✅ Calling onLoaded callback");
         onLoaded();
       }, 500);
     } catch (error) {
+      console.error("❌ Initialization error:", error);
       if (onError && !hasErrorOccurred.current) {
         hasErrorOccurred.current = true;
         onError();
@@ -172,7 +229,10 @@ function OfficeModel({
 
   // Privacy mode effect
   useEffect(() => {
-    if (doorGlassMeshRef.current && doorGlassMeshRef.current.material) {
+    if (!doorGlassMeshRef.current) return;
+
+    console.log("🔒 Privacy mode changed:", privacyMode);
+    if (doorGlassMeshRef.current.material) {
       const material = doorGlassMeshRef.current
         .material as THREE.MeshBasicMaterial;
 
@@ -190,6 +250,9 @@ function OfficeModel({
 
   // Meeting screen effect
   useEffect(() => {
+    if (screenMeshesRef.current.length === 0) return;
+
+    console.log("📺 Meeting mode changed:", meetingOn);
     screenMeshesRef.current.forEach((mesh) => {
       if (mesh.material) {
         const isBasicMaterial =
@@ -259,11 +322,13 @@ function OfficeModel({
     };
   }, [curtainPosition]);
 
-  // ✅ Add safety check before rendering
+  // ✅ Safety check before rendering
   if (!scene) {
+    console.log("⚠️ Scene not ready, returning null");
     return null;
   }
 
+  console.log("✅ Rendering scene");
   return <primitive object={scene} />;
 }
 

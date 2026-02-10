@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import FixedCameraEnhanced from "./FixedCamera";
 import EnvironmentLighting from "./EnvironmentLighting";
 import { Environment } from "@react-three/drei";
@@ -22,13 +22,16 @@ function Scene({
   onLoaded,
   onError,
 }: SceneProps) {
+  useEffect(() => {
+    console.log("🎬 Scene component mounted");
+  }, []);
+
   return (
     <>
       <Environment
-        // files="/models/cobblestone_street_night_2k.exr"
         files="/models/img-bg.jpeg"
-        background={true} // Show as background
-        environmentIntensity={0} // Don't affect lighting (IBL off)
+        background={true}
+        environmentIntensity={0}
         backgroundRotation={[0, Math.PI * 1.5, 0]}
       />
       <Suspense fallback={null}>
