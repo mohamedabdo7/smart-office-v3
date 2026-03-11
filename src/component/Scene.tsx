@@ -12,6 +12,12 @@ interface SceneProps {
   curtainPosition: number;
   onLoaded: () => void;
   onError?: () => void;
+  onLightClick?: () => void;
+  onPrivacyClick?: () => void;
+  onMeetingClick?: () => void;
+  onCurtainClick?: () => void;
+  onHoverEnter?: (deviceType: string, meshName: string) => void;
+  onHoverLeave?: () => void;
 }
 
 function Scene({
@@ -21,9 +27,15 @@ function Scene({
   curtainPosition,
   onLoaded,
   onError,
+  onLightClick,
+  onPrivacyClick,
+  onMeetingClick,
+  onCurtainClick,
+  onHoverEnter,
+  onHoverLeave,
 }: SceneProps) {
   useEffect(() => {
-    console.log("🎬 Scene component mounted");
+    console.log("🎬 Scene mounted");
   }, []);
 
   return (
@@ -44,6 +56,12 @@ function Scene({
           curtainPosition={curtainPosition}
           onLoaded={onLoaded}
           onError={onError}
+          onLightClick={onLightClick}
+          onPrivacyClick={onPrivacyClick}
+          onMeetingClick={onMeetingClick}
+          onCurtainClick={onCurtainClick}
+          onHoverEnter={onHoverEnter}
+          onHoverLeave={onHoverLeave}
         />
       </Suspense>
       <Suspense fallback={null}>
