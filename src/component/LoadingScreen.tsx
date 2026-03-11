@@ -19,18 +19,16 @@ function LoadingScreen({
   // useEffect(() => {
   //   if ((hasError || isTimeout) && onRetry) {
   //     setCountdown(autoRetrySeconds);
-
   //     const interval = setInterval(() => {
   //       setCountdown((prev) => {
   //         if (prev <= 1) {
   //           clearInterval(interval);
-  //           onRetry(); // Auto reload
+  //           onRetry();
   //           return 0;
   //         }
   //         return prev - 1;
   //       });
   //     }, 1000);
-
   //     return () => clearInterval(interval);
   //   }
   // }, [hasError, isTimeout, onRetry, autoRetrySeconds]);
@@ -43,22 +41,23 @@ function LoadingScreen({
         left: 0,
         width: "100vw",
         height: "100vh",
-        background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)",
+        // Uses project background color with a subtle gradient variant
+        background: "linear-gradient(135deg, #1a1a1a 0%, #242424 100%)",
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
         zIndex: 9999,
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "system-ui, Avenir, Helvetica, Arial, sans-serif",
         padding: "clamp(1rem, 5vw, 3rem)",
         boxSizing: "border-box",
         overflow: "hidden",
       }}
     >
-      {/* Logo/Icon - Responsive size */}
+      {/* Logo/Icon */}
       <div
         style={{
-          fontSize: "clamp(3rem, 15vw, 5rem)", // 48px - 80px
+          fontSize: "clamp(3rem, 15vw, 5rem)",
           marginBottom: "clamp(1rem, 3vw, 2rem)",
           animation:
             hasError || isTimeout ? "none" : "pulse 2s ease-in-out infinite",
@@ -68,13 +67,13 @@ function LoadingScreen({
         {hasError || isTimeout ? "⚠️" : "🏢"}
       </div>
 
-      {/* Title - Responsive font size */}
+      {/* Title */}
       <h1
         style={{
-          color: hasError || isTimeout ? "#ff6b6b" : "#00ff88",
-          fontSize: "clamp(1.5rem, 5vw, 2rem)", // 24px - 32px
+          // Error: red tone / Normal: project accent #646cff
+          color: hasError || isTimeout ? "#ff6b6b" : "#646cff",
+          fontSize: "clamp(1.5rem, 5vw, 2rem)",
           fontWeight: "bold",
-          marginBottom: "clamp(0.75rem, 2vw, 1rem)",
           textAlign: "center",
           lineHeight: 1.2,
           padding: "0 1rem",
@@ -90,12 +89,12 @@ function LoadingScreen({
             : "Loading Office..."}
       </h1>
 
-      {/* Message - Responsive font and spacing */}
+      {/* Message */}
       <p
         style={{
-          color: "#aaa",
-          fontSize: "clamp(0.875rem, 3vw, 1rem)", // 14px - 16px
-          marginBottom: "clamp(1rem, 3vw, 1.5rem)",
+          // Project text color
+          color: "rgba(255, 255, 255, 0.87)",
+          fontSize: "clamp(0.875rem, 3vw, 1rem)",
           textAlign: "center",
           maxWidth: "min(90%, 400px)",
           padding: "0 1rem",
@@ -110,12 +109,12 @@ function LoadingScreen({
             : "Please wait while we prepare your virtual office"}
       </p>
 
-      {/* Auto-reload countdown - Responsive */}
+      {/* Auto-reload countdown */}
       {(hasError || isTimeout) && (
         <div
           style={{
-            color: "#00ff88",
-            fontSize: "clamp(1rem, 3.5vw, 1.125rem)", // 16px - 18px
+            color: "#646cff",
+            fontSize: "clamp(1rem, 3.5vw, 1.125rem)",
             fontWeight: "bold",
             marginBottom: "clamp(1rem, 3vw, 1.5rem)",
             textAlign: "center",
@@ -126,35 +125,37 @@ function LoadingScreen({
         </div>
       )}
 
-      {/* Retry Button or Loading Spinner - Responsive */}
+      {/* Retry Button or Loading Spinner */}
       {hasError || isTimeout ? (
         <button
           onClick={onRetry}
           style={{
             padding: "clamp(0.75rem, 2vw, 1rem) clamp(1.5rem, 5vw, 2.5rem)",
-            fontSize: "clamp(0.875rem, 3vw, 1.125rem)", // 14px - 18px
-            fontWeight: "bold",
-            color: "#000",
-            background: "#00ff88",
-            border: "none",
+            fontSize: "clamp(0.875rem, 3vw, 1.125rem)",
+            fontWeight: "500",
+            fontFamily: "inherit",
+            // Project button colors
+            color: "rgba(255, 255, 255, 0.87)",
+            background: "#1a1a1a",
+            border: "1px solid #646cff",
             borderRadius: "8px",
             cursor: "pointer",
-            transition: "all 0.3s",
-            boxShadow: "0 4px 15px rgba(0, 255, 136, 0.3)",
+            transition: "border-color 0.25s, box-shadow 0.25s",
+            boxShadow: "0 4px 15px rgba(100, 108, 255, 0.2)",
             minWidth: "min(200px, 80%)",
             maxWidth: "300px",
             touchAction: "manipulation",
             WebkitTapHighlightColor: "transparent",
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "scale(1.05)";
+            e.currentTarget.style.borderColor = "#535bf2";
             e.currentTarget.style.boxShadow =
-              "0 6px 20px rgba(0, 255, 136, 0.5)";
+              "0 6px 20px rgba(100, 108, 255, 0.4)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "scale(1)";
+            e.currentTarget.style.borderColor = "#646cff";
             e.currentTarget.style.boxShadow =
-              "0 4px 15px rgba(0, 255, 136, 0.3)";
+              "0 4px 15px rgba(100, 108, 255, 0.2)";
           }}
           onTouchStart={(e) => {
             e.currentTarget.style.transform = "scale(0.95)";
@@ -168,37 +169,35 @@ function LoadingScreen({
       ) : (
         <div
           style={{
-            width: "clamp(3rem, 10vw, 4rem)", // 48px - 64px
-            height: "clamp(3rem, 10vw, 4rem)", // 48px - 64px
-            border: "clamp(4px, 1vw, 6px) solid rgba(0, 255, 136, 0.1)",
-            borderTop: "clamp(4px, 1vw, 6px) solid #00ff88",
+            width: "clamp(3rem, 10vw, 4rem)",
+            height: "clamp(3rem, 10vw, 4rem)",
+            // Spinner uses project accent color
+            border: "clamp(4px, 1vw, 6px) solid rgba(100, 108, 255, 0.15)",
+            borderTop: "clamp(4px, 1vw, 6px) solid #646cff",
             borderRadius: "50%",
             animation: "spin 1s linear infinite",
           }}
         />
       )}
 
-      {/* CSS Animations - Enhanced for mobile */}
       <style>
         {`
           @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
-          
+
           @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 1; }
             50% { transform: scale(1.1); opacity: 0.8; }
           }
 
-          /* Ensure smooth scrolling if content overflows on very small screens */
           @media (max-height: 500px) {
             body {
               overflow: auto;
             }
           }
 
-          /* Reduce animation on devices that prefer reduced motion */
           @media (prefers-reduced-motion: reduce) {
             * {
               animation-duration: 0.01ms !important;
