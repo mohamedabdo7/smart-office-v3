@@ -1,26 +1,28 @@
-import { lazy, Suspense, useState, useEffect, useRef } from "react";
+import {
+  lazy,
+  Suspense,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { Canvas } from "@react-three/fiber";
 import * as THREE from "three";
-import ControlPanel from "./component/ControlPanel";
 import LoadingScreen from "./component/LoadingScreen";
 import ErrorBoundary from "./component/ErrorBoundary";
+import DevicePopup, { DeviceType } from "./component/DevicePopup";
 
 const Scene = lazy(() => import("./component/Scene"));
 
 const MAX_RETRY_ATTEMPTS = 3;
 const AUTO_RETRY_DELAY = 5;
 
-// 🔍 Helper functions for device detection
-const isIOS = () => {
-  return (
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-};
+const isIOS = () =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
-const isSafari = () => {
-  return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-};
+const isSafari = () =>
+  /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -40,24 +42,24 @@ function App() {
     "stopped",
   );
 
+  // 🆕 Popup state
+  const [activeDevice, setActiveDevice] = useState<DeviceType | null>(null);
+  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
+
   const animationFrameRef = useRef<number | null>(null);
   const lastPositionRef = useRef(0);
   const loadingTimeoutRef = useRef<number | null>(null);
 
-  // 🔍 Log device info once
   useEffect(() => {
     console.log("🚀 App starting...");
-    console.log("🔍 Device:", {
-      isIOS: isIOS(),
-      isSafari: isSafari(),
-      userAgent: navigator.userAgent,
-    });
+    console.log("🔍 Device:", { isIOS: isIOS(), isSafari: isSafari() });
   }, []);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setMinLoadTimePassed(true);
-    }, 1000);
+    const timer = setTimeout(() => setMinLoadTimePassed(true), 1000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -68,25 +70,19 @@ function App() {
         setIsTimeout(true);
       }, 30000);
     }
-
     return () => {
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     };
   }, [isLoading, hasError]);
 
   const handleLoaded = () => {
     console.log("✅ handleLoaded called");
-
     if (minLoadTimePassed) {
       setIsLoading(false);
       setHasError(false);
       setIsTimeout(false);
       setRetryCount(0);
-      if (loadingTimeoutRef.current) {
-        clearTimeout(loadingTimeoutRef.current);
-      }
+      if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
     } else {
       const checkInterval = setInterval(() => {
         if (minLoadTimePassed) {
@@ -95,9 +91,8 @@ function App() {
           setIsTimeout(false);
           setRetryCount(0);
           clearInterval(checkInterval);
-          if (loadingTimeoutRef.current) {
+          if (loadingTimeoutRef.current)
             clearTimeout(loadingTimeoutRef.current);
-          }
         }
       }, 100);
     }
@@ -107,27 +102,23 @@ function App() {
     console.error("❌ handleError called");
     setHasError(true);
     setIsLoading(true);
-    if (loadingTimeoutRef.current) {
-      clearTimeout(loadingTimeoutRef.current);
-    }
+    if (loadingTimeoutRef.current) clearTimeout(loadingTimeoutRef.current);
   };
 
   const handleRetry = () => {
-    console.log("🔄 Retrying...");
     if (retryCount < MAX_RETRY_ATTEMPTS) {
       setRetryCount((prev) => prev + 1);
-      window.location.reload();
     } else {
       setRetryCount(0);
-      window.location.reload();
     }
+    window.location.reload();
   };
 
   const handleLightsOn = () => {
     if (lightsBrightness === 0) {
-      const targetBrightness =
-        lastBrightnessRef.current > 0 ? lastBrightnessRef.current : 100;
-      setLightsBrightness(targetBrightness);
+      setLightsBrightness(
+        lastBrightnessRef.current > 0 ? lastBrightnessRef.current : 100,
+      );
     }
   };
 
@@ -139,9 +130,7 @@ function App() {
   };
 
   useEffect(() => {
-    if (lightsBrightness > 0) {
-      lastBrightnessRef.current = lightsBrightness;
-    }
+    if (lightsBrightness > 0) lastBrightnessRef.current = lightsBrightness;
   }, [lightsBrightness]);
 
   useEffect(() => {
@@ -174,7 +163,6 @@ function App() {
         }
         return prev;
       });
-
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -189,24 +177,13 @@ function App() {
   }, [curtainMoving]);
 
   const handleCurtainUp = () => {
-    if (curtainPosition >= 100) {
-      return;
-    }
-    setCurtainMoving("up");
+    if (curtainPosition < 100) setCurtainMoving("up");
   };
-
   const handleCurtainDown = () => {
-    if (curtainPosition <= 0) {
-      return;
-    }
-    setCurtainMoving("down");
+    if (curtainPosition > 0) setCurtainMoving("down");
   };
-
   const handleCurtainStop = () => {
-    if (curtainMoving === "stopped") {
-      return;
-    }
-    setCurtainMoving("stopped");
+    if (curtainMoving !== "stopped") setCurtainMoving("stopped");
   };
 
   useEffect(() => {
@@ -214,6 +191,25 @@ function App() {
       lastPositionRef.current = curtainPosition;
     }
   }, [curtainPosition]);
+
+  // 🆕 Handle device click from the 3D scene
+  const handleDeviceClick = useCallback(
+    (device: DeviceType, screenPos: { x: number; y: number }) => {
+      // Toggle off if same device clicked again
+      if (activeDevice === device) {
+        setActiveDevice(null);
+        return;
+      }
+      setActiveDevice(device);
+      setPopupPosition(screenPos);
+    },
+    [activeDevice],
+  );
+
+  // 🆕 Close popup
+  const handleClosePopup = useCallback(() => {
+    setActiveDevice(null);
+  }, []);
 
   return (
     <div
@@ -242,24 +238,6 @@ function App() {
           transition: "opacity 0.5s",
         }}
       >
-        <div style={{ display: "none" }}>
-          <ControlPanel
-            lightsBrightness={lightsBrightness}
-            setLightsBrightness={setLightsBrightness}
-            onLightsOn={handleLightsOn}
-            onLightsOff={handleLightsOff}
-            privacyMode={privacyMode}
-            setPrivacyMode={setPrivacyMode}
-            meetingOn={meetingOn}
-            setMeetingOn={setMeetingOn}
-            curtainPosition={curtainPosition}
-            onCurtainUp={handleCurtainUp}
-            onCurtainDown={handleCurtainDown}
-            onCurtainStop={handleCurtainStop}
-            curtainMoving={curtainMoving}
-          />
-        </div>
-
         <Canvas
           shadows
           camera={{ position: [0, 1.6, 5], fov: 75, near: 0.1, far: 1000 }}
@@ -286,10 +264,31 @@ function App() {
                 curtainPosition={curtainPosition}
                 onLoaded={handleLoaded}
                 onError={handleError}
+                onDeviceClick={handleDeviceClick} // 🆕
               />
             </Suspense>
           </ErrorBoundary>
         </Canvas>
+
+        {/* 🆕 Floating device control popup */}
+        <DevicePopup
+          device={activeDevice}
+          position={popupPosition}
+          onClose={handleClosePopup}
+          lightsBrightness={lightsBrightness}
+          setLightsBrightness={setLightsBrightness}
+          onLightsOn={handleLightsOn}
+          onLightsOff={handleLightsOff}
+          privacyMode={privacyMode}
+          setPrivacyMode={setPrivacyMode}
+          meetingOn={meetingOn}
+          setMeetingOn={setMeetingOn}
+          curtainPosition={curtainPosition}
+          onCurtainUp={handleCurtainUp}
+          onCurtainDown={handleCurtainDown}
+          onCurtainStop={handleCurtainStop}
+          curtainMoving={curtainMoving}
+        />
       </div>
     </div>
   );
