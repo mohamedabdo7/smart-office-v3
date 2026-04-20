@@ -468,7 +468,7 @@ function DevicePopup({
         )}
 
         {/* ══ MEETING ══ */}
-        {device === "meeting" && (
+        {/* {device === "meeting" && (
           <>
             <div style={statusCard(meetingOn)}>
               <div
@@ -506,7 +506,7 @@ function DevicePopup({
               {meetingOn ? "End Meeting" : "Start Meeting"}
             </button>
           </>
-        )}
+        )} */}
 
         {/* ══ CURTAIN ══ */}
         {device === "curtain" && (
