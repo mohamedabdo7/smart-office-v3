@@ -512,7 +512,7 @@ function DevicePopup({
         {device === "curtain" && (
           <>
             <div style={{ textAlign: "center", marginBottom: "12px" }}>
-              <div
+              {/* <div
                 style={{
                   fontSize: "34px",
                   fontWeight: 700,
@@ -530,11 +530,11 @@ function DevicePopup({
                 >
                   %
                 </span>
-              </div>
-              <div style={{ ...label12, textAlign: "center" }}>open</div>
+              </div> */}
+              {/* <div style={{ ...label12, textAlign: "center" }}>open</div> */}
             </div>
 
-            <div
+            {/* <div
               style={{
                 height: "5px",
                 borderRadius: "3px",
@@ -552,7 +552,7 @@ function DevicePopup({
                   transition: "width 0.1s",
                 }}
               />
-            </div>
+            </div> */}
 
             <div style={{ display: "flex", gap: "8px", marginBottom: "10px" }}>
               <button
